@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://172.22.87.1:5000/api";
+const API_URL = "https://shoply-d4dk.onrender.com/api"; // Replace with your backend API URL
 
 const api = axios.create({
   baseURL: API_URL,
