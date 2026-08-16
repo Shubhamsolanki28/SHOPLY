@@ -1,4 +1,4 @@
-const Cart = require("../models/Cart");
+const Cart = require("../models/cart");
 const Product = require("../models/Product");
 
 // Add product to cart
@@ -67,7 +67,7 @@ const addToCart = async (req, res) => {
 
     // Check if product already exists in cart
     const existingItem = cart.items.find(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (existingItem) {
@@ -114,7 +114,7 @@ const getCart = async (req, res) => {
       user: req.user.userId,
     }).populate(
       "items.product",
-      "name description price image category rating stock"
+      "name description price image category rating stock",
     );
 
     // If cart doesn't exist
@@ -133,13 +133,13 @@ const getCart = async (req, res) => {
     // Calculate total items
     const totalItems = cart.items.reduce(
       (total, item) => total + item.quantity,
-      0
+      0,
     );
 
     // Calculate total price
     const totalPrice = cart.items.reduce(
       (total, item) => total + item.price * item.quantity,
-      0
+      0,
     );
 
     res.status(200).json({
@@ -161,7 +161,6 @@ const getCart = async (req, res) => {
     });
   }
 };
-
 
 // Update cart item quantity
 const updateCartItem = async (req, res) => {
@@ -191,7 +190,7 @@ const updateCartItem = async (req, res) => {
 
     // Find cart item
     const cartItem = cart.items.find(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (!cartItem) {
@@ -226,17 +225,17 @@ const updateCartItem = async (req, res) => {
     // Return updated cart with product details
     const updatedCart = await Cart.findById(cart._id).populate(
       "items.product",
-      "name description price image category rating stock"
+      "name description price image category rating stock",
     );
 
     const totalItems = updatedCart.items.reduce(
       (total, item) => total + item.quantity,
-      0
+      0,
     );
 
     const totalPrice = updatedCart.items.reduce(
       (total, item) => total + item.price * item.quantity,
-      0
+      0,
     );
 
     res.status(200).json({
@@ -260,7 +259,6 @@ const updateCartItem = async (req, res) => {
   }
 };
 
-
 // Remove item from cart
 const removeFromCart = async (req, res) => {
   try {
@@ -280,7 +278,7 @@ const removeFromCart = async (req, res) => {
 
     // Check whether product exists in cart
     const itemExists = cart.items.some(
-      (item) => item.product.toString() === productId
+      (item) => item.product.toString() === productId,
     );
 
     if (!itemExists) {
@@ -292,7 +290,7 @@ const removeFromCart = async (req, res) => {
 
     // Remove product
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== productId
+      (item) => item.product.toString() !== productId,
     );
 
     await cart.save();
@@ -300,18 +298,18 @@ const removeFromCart = async (req, res) => {
     // Get updated cart with product details
     const updatedCart = await Cart.findById(cart._id).populate(
       "items.product",
-      "name description price image category rating stock"
+      "name description price image category rating stock",
     );
 
     // Calculate totals
     const totalItems = updatedCart.items.reduce(
       (total, item) => total + item.quantity,
-      0
+      0,
     );
 
     const totalPrice = updatedCart.items.reduce(
       (total, item) => total + item.price * item.quantity,
-      0
+      0,
     );
 
     res.status(200).json({
@@ -335,11 +333,9 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
   addToCart,
-   getCart,
-   updateCartItem,
-    removeFromCart,
+  getCart,
+  updateCartItem,
+  removeFromCart,
 };
