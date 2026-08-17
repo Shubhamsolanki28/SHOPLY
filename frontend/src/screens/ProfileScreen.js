@@ -32,65 +32,43 @@ export default function ProfileScreen({ navigation }) {
     loadUser();
   }, []);
 
-  const handleLogout = () => {
-  Alert.alert(
-    "Logout",
-    "Are you sure you want to logout?",
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Remove login data
-            await AsyncStorage.removeItem("token");
-            await AsyncStorage.removeItem("user");
+  const handleLogout = async () => {
+    try {
+      console.log("LOGOUT BUTTON CLICKED");
 
-            // Go back to Root Navigator
-            // Profile -> MainTabs -> App -> Root
-            const rootNavigation = navigation
-              .getParent()
-              ?.getParent();
+      // Remove login data
+      await AsyncStorage.multiRemove(["token", "user"]);
 
-            if (rootNavigation) {
-              rootNavigation.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: "Auth",
-                  },
-                ],
-              });
-            }
-          } catch (error) {
-            console.log("Logout Error:", error);
+      console.log("TOKEN AND USER REMOVED");
 
-            Alert.alert(
-              "Logout Failed",
-              "Unable to logout. Please try again."
-            );
-          }
-        },
-      },
-    ]
-  );
-};
+      const rootNavigation = navigation.getParent("RootNavigator");
 
+      console.log("ROOT NAVIGATION:", rootNavigation);
+
+      if (rootNavigation) {
+        rootNavigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: "Auth",
+            },
+          ],
+        });
+
+        console.log("LOGOUT SUCCESS");
+      } else {
+        console.log("ROOT NAVIGATION NOT FOUND");
+      }
+    } catch (error) {
+      console.log("LOGOUT ERROR:", error);
+    }
+  };
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator
-          size="large"
-          color="#FF5A36"
-        />
+        <ActivityIndicator size="large" color="#FF5A36" />
 
-        <Text style={styles.loadingText}>
-          Loading profile...
-        </Text>
+        <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
@@ -100,13 +78,9 @@ export default function ProfileScreen({ navigation }) {
       {/* HEADER */}
 
       <View style={styles.header}>
-        <Text style={styles.shoplyText}>
-          SHOPLY
-        </Text>
+        <Text style={styles.shoplyText}>SHOPLY</Text>
 
-        <Text style={styles.title}>
-          My Profile
-        </Text>
+        <Text style={styles.title}>My Profile</Text>
       </View>
 
       {/* PROFILE CARD */}
@@ -114,19 +88,13 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {user?.name
-              ? user.name.charAt(0).toUpperCase()
-              : "U"}
+            {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
           </Text>
         </View>
 
-        <Text style={styles.name}>
-          {user?.name || "SHOPLY User"}
-        </Text>
+        <Text style={styles.name}>{user?.name || "SHOPLY User"}</Text>
 
-        <Text style={styles.email}>
-          {user?.email || "Logged in user"}
-        </Text>
+        <Text style={styles.email}>{user?.email || "Logged in user"}</Text>
       </View>
 
       {/* OPTIONS */}
@@ -134,23 +102,15 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.optionsContainer}>
         <TouchableOpacity
           style={styles.option}
-          onPress={() =>
-            navigation.navigate("Orders")
-          }
+          onPress={() => navigation.navigate("Orders")}
         >
           <View>
-            <Text style={styles.optionTitle}>
-              My Orders
-            </Text>
+            <Text style={styles.optionTitle}>My Orders</Text>
 
-            <Text style={styles.optionSubtitle}>
-              View your order history
-            </Text>
+            <Text style={styles.optionSubtitle}>View your order history</Text>
           </View>
 
-          <Text style={styles.arrow}>
-            →
-          </Text>
+          <Text style={styles.arrow}>→</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -162,30 +122,19 @@ export default function ProfileScreen({ navigation }) {
           }
         >
           <View>
-            <Text style={styles.optionTitle}>
-              My Cart
-            </Text>
+            <Text style={styles.optionTitle}>My Cart</Text>
 
-            <Text style={styles.optionSubtitle}>
-              View your shopping cart
-            </Text>
+            <Text style={styles.optionSubtitle}>View your shopping cart</Text>
           </View>
 
-          <Text style={styles.arrow}>
-            →
-          </Text>
+          <Text style={styles.arrow}>→</Text>
         </TouchableOpacity>
       </View>
 
       {/* LOGOUT */}
 
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.logoutText}>
-          LOGOUT
-        </Text>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>LOGOUT</Text>
       </TouchableOpacity>
     </View>
   );

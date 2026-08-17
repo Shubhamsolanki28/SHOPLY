@@ -18,9 +18,11 @@ export default function ProductsScreen({ navigation, route }) {
   const [products, setProducts] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [search, setSearch] = useState("");
+  const [cartLoading, setCartLoading] = useState(null);
+  const [toast, setToast] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState(
-    route?.params?.category || "All"
+    route?.params?.category || "All",
   );
 
   const [sort, setSort] = useState("default");
@@ -48,15 +50,9 @@ export default function ProductsScreen({ navigation, route }) {
         setProducts(response.data.products || []);
       }
     } catch (error) {
-      console.log(
-        "Products Error:",
-        error.response?.data || error.message
-      );
+      console.log("Products Error:", error.response?.data || error.message);
 
-      Alert.alert(
-        "Error",
-        "Unable to load products. Please try again."
-      );
+      Alert.alert("Error", "Unable to load products. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -84,16 +80,14 @@ export default function ProductsScreen({ navigation, route }) {
 
         setWishlist(
           wishlistProducts.map((product) =>
-            typeof product === "string"
-              ? product
-              : product._id
-          )
+            typeof product === "string" ? product : product._id,
+          ),
         );
       }
     } catch (error) {
       console.log(
         "Wishlist Fetch Error:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
     }
   };
@@ -105,100 +99,128 @@ export default function ProductsScreen({ navigation, route }) {
 
   // ================= CHECK WISHLIST =================
 
- const isWishlisted = (productId) => {
-  return wishlist.some(
-    (id) => String(id) === String(productId)
-  );
-};
+  const isWishlisted = (productId) => {
+    return wishlist.some((id) => String(id) === String(productId));
+  };
 
   // ================= TOGGLE WISHLIST =================
 
   const toggleWishlist = async (productId, productName) => {
-  try {
-    const token = await AsyncStorage.getItem("token");
+    try {
+      const token = await AsyncStorage.getItem("token");
 
-    if (!token) {
-      Alert.alert(
-        "Login Required",
-        "Please login to use wishlist."
+      if (!token) {
+        Alert.alert("Login Required", "Please login to use wishlist.");
+        return;
+      }
+
+      const alreadyWishlisted = wishlist.some(
+        (id) => String(id) === String(productId),
       );
-      return;
-    }
 
-    const alreadyWishlisted = wishlist.some(
-      (id) => String(id) === String(productId)
-    );
+      if (alreadyWishlisted) {
+        // REMOVE
 
-    if (alreadyWishlisted) {
-      // REMOVE
-
-      const response = await api.delete(
-        `/users/wishlist/${productId}`,
-        {
+        const response = await api.delete(`/users/wishlist/${productId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+        });
+
+        if (response.data.success) {
+          setWishlist((previous) =>
+            previous.filter((id) => String(id) !== String(productId)),
+          );
+
+          setToast(`${productName} removed from wishlist`);
+
+          setTimeout(() => {
+            setToast("");
+          }, 2500);
         }
+      } else {
+        // ADDsetToast(`${productName} added to wishlist ❤️`);
+
+        setTimeout(() => {
+          setToast("");
+        }, 2500);
+
+        const response = await api.post(
+          "/users/wishlist",
+          {
+            productId,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (response.data.success) {
+          // Immediately update heart
+          setWishlist((previous) => [...previous, String(productId)]);
+
+          Alert.alert("Wishlist ❤️", `${productName} added to wishlist.`);
+        }
+      }
+    } catch (error) {
+      console.log("Wishlist Error:", error.response?.data || error.message);
+
+      Alert.alert(
+        "Wishlist Error",
+        error.response?.data?.message || "Unable to update wishlist.",
       );
+    }
+  };
 
-      if (response.data.success) {
-  setWishlist((previous) => {
-    const updated = [
-      ...previous,
-      String(productId),
-    ];
+  // addTOCart
+  const addToCart = async (productId, productName) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
 
-    console.log("UPDATED WISHLIST:", updated);
+      if (!token) {
+        setToast("Please login to add products to cart.");
+        setTimeout(() => setToast(""), 2500);
+        return;
+      }
 
-    return updated;
-  });
-
-  Alert.alert(
-    "Wishlist ❤️",
-    `${productName} added to wishlist.`
-  );
-}
-    } else {
-      // ADD
+      setCartLoading(productId);
 
       const response = await api.post(
-        "/users/wishlist",
+        "/cart",
         {
           productId,
+          quantity: 1,
         },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.data.success) {
-        // Immediately update heart
-        setWishlist((previous) => [
-          ...previous,
-          String(productId),
-        ]);
+        setToast(`${productName} added to cart ✓`);
 
-        Alert.alert(
-          "Wishlist ❤️",
-          `${productName} added to wishlist.`
-        );
+        setTimeout(() => {
+          setToast("");
+        }, 2500);
       }
-    }
-  } catch (error) {
-    console.log(
-      "Wishlist Error:",
-      error.response?.data || error.message
-    );
+    } catch (error) {
+      console.log("Add To Cart Error:", error.response?.data || error.message);
 
-    Alert.alert(
-      "Wishlist Error",
-      error.response?.data?.message ||
-        "Unable to update wishlist."
-    );
-  }
-};
+      setToast(
+        error.response?.data?.message || "Unable to add product to cart.",
+      );
+
+      setTimeout(() => {
+        setToast("");
+      }, 2500);
+    } finally {
+      setCartLoading(null);
+    }
+  };
 
   // ================= SEARCH + CATEGORY + SORT =================
 
@@ -207,15 +229,12 @@ export default function ProductsScreen({ navigation, route }) {
 
     // Search
     if (search.trim()) {
-      const searchText =
-        search.toLowerCase();
+      const searchText = search.toLowerCase();
 
       result = result.filter((product) =>
-        `${product.name} ${
-          product.description || ""
-        } ${product.category || ""}`
+        `${product.name} ${product.description || ""} ${product.category || ""}`
           .toLowerCase()
-          .includes(searchText)
+          .includes(searchText),
       );
     }
 
@@ -223,65 +242,113 @@ export default function ProductsScreen({ navigation, route }) {
     if (selectedCategory !== "All") {
       result = result.filter(
         (product) =>
-          product.category?.toLowerCase() ===
-          selectedCategory.toLowerCase()
+          product.category?.toLowerCase() === selectedCategory.toLowerCase(),
       );
     }
 
     // Sorting
     if (sort === "low") {
-      result.sort(
-        (a, b) => a.price - b.price
-      );
+      result.sort((a, b) => a.price - b.price);
     }
 
     if (sort === "high") {
-      result.sort(
-        (a, b) => b.price - a.price
-      );
+      result.sort((a, b) => b.price - a.price);
     }
 
     if (sort === "rating") {
-      result.sort(
-        (a, b) =>
-          (b.rating || 0) -
-          (a.rating || 0)
-      );
+      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     }
 
     return result;
-  }, [
-    products,
-    search,
-    selectedCategory,
-    sort,
-  ]);
+  }, [products, search, selectedCategory, sort]);
 
   // ================= PRODUCT CARD =================
 
   const renderProduct = ({ item }) => {
     const liked = isWishlisted(item._id);
+    const isAdding = cartLoading === item._id;
 
     return (
-      <TouchableOpacity
-  style={styles.favoriteButton}
-  activeOpacity={0.7}
-  onPress={(event) => {
-    event.stopPropagation();
+      <View style={styles.productCard}>
+        {/* PRODUCT IMAGE */}
 
-    toggleWishlist(item._id, item.name);
-  }}
->
-  <Text
-    style={[
-      styles.favoriteIcon,
-      isWishlisted(item._id) &&
-        styles.favoriteIconActive,
-    ]}
-  >
-    {isWishlisted(item._id) ? "♥" : "♡"}
-  </Text>
-</TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() =>
+            navigation.navigate("ProductDetails", {
+              productId: item._id,
+            })
+          }
+        >
+          <View style={styles.imageContainer}>
+            <Image
+              source={{
+                uri:
+                  item.image ||
+                  "https://via.placeholder.com/300x300.png?text=Product",
+              }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+
+            {/* WISHLIST */}
+
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                toggleWishlist(item._id, item.name);
+              }}
+            >
+              <Text
+                style={[
+                  styles.favoriteIcon,
+                  liked && styles.favoriteIconActive,
+                ]}
+              >
+                {liked ? "♥" : "♡"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* PRODUCT INFO */}
+
+          <View style={styles.productInfo}>
+            <Text style={styles.categoryText}>
+              {item.category || "PRODUCT"}
+            </Text>
+
+            <Text style={styles.productName} numberOfLines={2}>
+              {item.name}
+            </Text>
+
+            <View style={styles.ratingRow}>
+              <Text style={styles.star}>★</Text>
+
+              <Text style={styles.rating}>{item.rating || "4.5"}</Text>
+            </View>
+
+            <Text style={styles.price}>₹{item.price}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* ADD TO CART */}
+
+        <TouchableOpacity
+          style={[
+            styles.addToCartButton,
+            isAdding && styles.addToCartButtonLoading,
+          ]}
+          disabled={isAdding}
+          onPress={() => addToCart(item._id, item.name)}
+        >
+          {isAdding ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.addToCartText}>ADD TO CART</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -289,38 +356,33 @@ export default function ProductsScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
+      {toast !== "" && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
 
       {/* HEADER */}
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerSmall}>
-            SHOPLY
-          </Text>
+          <Text style={styles.headerSmall}>SHOPLY</Text>
 
-          <Text style={styles.headerTitle}>
-            All Products
-          </Text>
+          <Text style={styles.headerTitle}>All Products</Text>
         </View>
 
         <TouchableOpacity
           style={styles.cartButton}
-          onPress={() =>
-            navigation.navigate("Cart")
-          }
+          onPress={() => navigation.navigate("Cart")}
         >
-          <Text style={styles.cartIcon}>
-            🛒
-          </Text>
+          <Text style={styles.cartIcon}>🛒</Text>
         </TouchableOpacity>
       </View>
 
       {/* SEARCH */}
 
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>
-          ⌕
-        </Text>
+        <Text style={styles.searchIcon}>⌕</Text>
 
         <TextInput
           style={styles.searchInput}
@@ -332,12 +394,8 @@ export default function ProductsScreen({ navigation, route }) {
         />
 
         {search.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setSearch("")}
-          >
-            <Text style={styles.clearText}>
-              ×
-            </Text>
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Text style={styles.clearText}>×</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -349,25 +407,19 @@ export default function ProductsScreen({ navigation, route }) {
         data={categories}
         keyExtractor={(item) => item}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={
-          styles.categoryList
-        }
+        contentContainerStyle={styles.categoryList}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[
               styles.categoryButton,
-              selectedCategory === item &&
-                styles.categoryButtonActive,
+              selectedCategory === item && styles.categoryButtonActive,
             ]}
-            onPress={() =>
-              setSelectedCategory(item)
-            }
+            onPress={() => setSelectedCategory(item)}
           >
             <Text
               style={[
                 styles.categoryButtonText,
-                selectedCategory === item &&
-                  styles.categoryButtonTextActive,
+                selectedCategory === item && styles.categoryButtonTextActive,
               ]}
             >
               {item}
@@ -401,10 +453,10 @@ export default function ProductsScreen({ navigation, route }) {
             {sort === "default"
               ? "Sort"
               : sort === "low"
-              ? "Price ↑"
-              : sort === "high"
-              ? "Price ↓"
-              : "Rating ★"}
+                ? "Price ↑"
+                : sort === "high"
+                  ? "Price ↓"
+                  : "Rating ★"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -413,28 +465,17 @@ export default function ProductsScreen({ navigation, route }) {
 
       {loading ? (
         <View style={styles.loader}>
-          <ActivityIndicator
-            size="large"
-            color="#FF5A36"
-          />
+          <ActivityIndicator size="large" color="#FF5A36" />
 
-          <Text style={styles.loadingText}>
-            Loading products...
-          </Text>
+          <Text style={styles.loadingText}>Loading products...</Text>
         </View>
       ) : filteredProducts.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>
-            🔍
-          </Text>
+          <Text style={styles.emptyEmoji}>🔍</Text>
 
-          <Text style={styles.emptyTitle}>
-            No products found
-          </Text>
+          <Text style={styles.emptyTitle}>No products found</Text>
 
-          <Text style={styles.emptyText}>
-            Try another search or category.
-          </Text>
+          <Text style={styles.emptyText}>Try another search or category.</Text>
 
           <TouchableOpacity
             style={styles.resetButton}
@@ -444,26 +485,18 @@ export default function ProductsScreen({ navigation, route }) {
               setSort("default");
             }}
           >
-            <Text style={styles.resetText}>
-              Clear Filters
-            </Text>
+            <Text style={styles.resetText}>Clear Filters</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={filteredProducts}
-          keyExtractor={(item) =>
-            item._id
-          }
+          keyExtractor={(item) => item._id}
           renderItem={renderProduct}
           numColumns={2}
-          columnWrapperStyle={
-            styles.columnWrapper
-          }
+          columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={
-            styles.productList
-          }
+          contentContainerStyle={styles.productList}
         />
       )}
     </View>
@@ -747,5 +780,55 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
+  },
+  addToCartButton: {
+    height: 42,
+    backgroundColor: "#111111",
+    marginHorizontal: 11,
+    marginBottom: 11,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  addToCartButtonLoading: {
+    opacity: 0.7,
+  },
+
+  addToCartText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  toast: {
+    position: "absolute",
+    top: 55,
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    backgroundColor: "#111111",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+
+    elevation: 10,
+
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+
+  toastText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Modal,
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,6 +25,10 @@ export default function CheckoutScreen({ navigation }) {
   const [pincode, setPincode] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState("COD");
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(null);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   const fetchCart = async () => {
     try {
@@ -121,7 +126,13 @@ export default function CheckoutScreen({ navigation }) {
       return;
     }
 
+    if (placingOrder) {
+      return;
+    }
+
     try {
+      setPlacingOrder(true);
+
       const token = await AsyncStorage.getItem("token");
 
       if (!token) {
@@ -147,18 +158,10 @@ export default function CheckoutScreen({ navigation }) {
       );
 
       if (response.data.success) {
-        Alert.alert(
-          "Order Placed Successfully 🎉",
-          `Your order has been placed successfully.\n\nOrder Total: ₹${response.data.order.totalPrice}`,
-          [
-            {
-              text: "View Orders",
-              onPress: () => {
-                navigation.navigate("Orders");
-              },
-            },
-          ],
-        );
+        console.log("ORDER SUCCESS:", response.data);
+
+        setOrderSuccess(response.data.order);
+        setShowSuccessModal(true);
       }
     } catch (error) {
       console.log("Place Order Error:", error.response?.data || error.message);
@@ -167,6 +170,8 @@ export default function CheckoutScreen({ navigation }) {
         error.response?.data?.message || "Unable to place your order.";
 
       Alert.alert("Order Failed", message);
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -379,16 +384,84 @@ export default function CheckoutScreen({ navigation }) {
         {/* PLACE ORDER */}
 
         <TouchableOpacity
-          style={styles.placeOrderButton}
+          style={[
+            styles.placeOrderButton,
+            placingOrder && styles.placeOrderButtonDisabled,
+          ]}
           onPress={handlePlaceOrder}
+          disabled={placingOrder}
         >
-          <Text style={styles.placeOrderText}>PLACE ORDER →</Text>
+          {placingOrder ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.placeOrderText}>PLACE ORDER →</Text>
+          )}
         </TouchableOpacity>
 
         <Text style={styles.secureText}>
           🔒 Your order information is secure
         </Text>
       </ScrollView>
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModal}>
+            <View style={styles.successIcon}>
+              <Text style={styles.successIconText}>✓</Text>
+            </View>
+
+            <Text style={styles.successTitle}>Order Placed!</Text>
+
+            <Text style={styles.successMessage}>
+              Your order has been placed successfully.
+            </Text>
+
+            {orderSuccess && (
+              <>
+                <Text style={styles.orderIdText}>Order ID</Text>
+
+                <Text style={styles.orderId}>
+                  #{String(orderSuccess.id).slice(-8).toUpperCase()}
+                </Text>
+
+                <View style={styles.successTotal}>
+                  <Text style={styles.successTotalLabel}>Total</Text>
+
+                  <Text style={styles.successTotalValue}>
+                    ₹{orderSuccess.totalPrice}
+                  </Text>
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.viewOrdersButton}
+              onPress={() => {
+                setShowSuccessModal(false);
+                navigation.navigate("Orders");
+              }}
+            >
+              <Text style={styles.viewOrdersText}>VIEW MY ORDERS →</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={() => {
+                setShowSuccessModal(false);
+                navigation.navigate("MainTabs", {
+                  screen: "Home",
+                });
+              }}
+            >
+              <Text style={styles.continueText}>Continue Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -667,5 +740,114 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "#777777",
     fontSize: 13,
+  },
+  placeOrderButtonDisabled: {
+    opacity: 0.7,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 25,
+  },
+
+  successModal: {
+    width: "100%",
+    maxWidth: 430,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 25,
+    alignItems: "center",
+  },
+
+  successIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#EAF8EF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  successIconText: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#238636",
+  },
+
+  successTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#111111",
+  },
+
+  successMessage: {
+    fontSize: 13,
+    color: "#777777",
+    textAlign: "center",
+    marginTop: 7,
+  },
+
+  orderIdText: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 20,
+  },
+
+  orderId: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111111",
+    marginTop: 3,
+  },
+
+  successTotal: {
+    width: "100%",
+    backgroundColor: "#F8F8F8",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  successTotalLabel: {
+    fontSize: 13,
+    color: "#777777",
+  },
+
+  successTotalValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#111111",
+  },
+
+  viewOrdersButton: {
+    width: "100%",
+    height: 50,
+    backgroundColor: "#111111",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  viewOrdersText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  continueButton: {
+    marginTop: 15,
+  },
+
+  continueText: {
+    color: "#FF5A36",
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
