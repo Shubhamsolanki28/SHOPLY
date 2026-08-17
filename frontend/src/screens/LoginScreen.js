@@ -15,81 +15,57 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 
-
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-  if (!email.trim() || !password.trim()) {
-    Alert.alert(
-      "Missing Information",
-      "Please enter your email and password."
-    );
-    return;
-  }
+    if (!email.trim() || !password.trim()) {
+      Alert.alert(
+        "Missing Information",
+        "Please enter your email and password.",
+      );
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await api.post("/auth/login", {
-      email: email.trim(),
-      password,
-    });
+      const response = await api.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
 
- if (response.data.success) {
-  const token = response.data.token;
+      if (response.data.success) {
+        const token = response.data.token;
 
-  await AsyncStorage.setItem(
-    "token",
-    token
-  );
+        await AsyncStorage.setItem("token", token);
 
-  await AsyncStorage.setItem(
-    "user",
-    JSON.stringify(response.data.user)
-  );
+        await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
 
-  Alert.alert(
-    "Login Successful",
-    "Welcome back to SHOPLY!",
-    [
-      {
-        text: "OK",
-        onPress: () => {
-          navigation.getParent()?.reset({
-            index: 0,
-            routes: [
-              {
-                name: "App",
-              },
-            ],
-          });
-        },
-      },
-    ]
-  );
+        console.log("JWT and user saved successfully");
 
-  console.log(
-    "JWT and user saved successfully"
-  );
-}
-  } catch (error) {
-    console.log(
-      "Login Error:",
-      error.response?.data || error.message
-    );
+        navigation.getParent()?.reset({
+          index: 0,
+          routes: [
+            {
+              name: "App",
+            },
+          ],
+        });
+      }
+    } catch (error) {
+      console.log("Login Error:", error.response?.data || error.message);
 
-    const message =
-      error.response?.data?.message ||
-      "Unable to login. Please try again.";
+      const message =
+        error.response?.data?.message || "Unable to login. Please try again.";
 
-    Alert.alert("Login Failed", message);
-  } finally {
-    setLoading(false);
-  }
-};
+      Alert.alert("Login Failed", message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -111,9 +87,7 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.content}>
           <Text style={styles.title}>Welcome back 👋</Text>
 
-          <Text style={styles.subtitle}>
-            Sign in to continue shopping
-          </Text>
+          <Text style={styles.subtitle}>Sign in to continue shopping</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Address</Text>
@@ -146,9 +120,7 @@ export default function LoginScreen({ navigation }) {
             style={styles.forgotButton}
             onPress={() => navigation.navigate("ForgotPassword")}
           >
-            <Text style={styles.forgotText}>
-              Forgot Password?
-            </Text>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -164,16 +136,10 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>
-              Don't have an account?
-            </Text>
+            <Text style={styles.signupText}>Don't have an account?</Text>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Signup")}
-            >
-              <Text style={styles.signupLink}>
-                Create Account
-              </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+              <Text style={styles.signupLink}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </View>

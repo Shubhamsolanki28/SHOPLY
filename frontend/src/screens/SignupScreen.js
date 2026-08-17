@@ -30,16 +30,13 @@ export default function SignupScreen({ navigation }) {
     if (password.length < 6) {
       Alert.alert(
         "Invalid Password",
-        "Password must be at least 6 characters."
+        "Password must be at least 6 characters.",
       );
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert(
-        "Password Mismatch",
-        "Passwords do not match."
-      );
+      Alert.alert("Password Mismatch", "Passwords do not match.");
       return;
     }
 
@@ -53,22 +50,19 @@ export default function SignupScreen({ navigation }) {
       });
 
       if (response.data.success) {
-        Alert.alert(
-          "Account Created 🎉",
-          "Your SHOPLY account has been created successfully.",
-          [
+        console.log("Account created successfully");
+
+        navigation.reset({
+          index: 0,
+          routes: [
             {
-              text: "Login",
-              onPress: () => navigation.navigate("Login"),
+              name: "Login",
             },
-          ]
-        );
+          ],
+        });
       }
     } catch (error) {
-      console.log(
-        "Signup Error:",
-        error.response?.data || error.message
-      );
+      console.log("Signup Error:", error.response?.data || error.message);
 
       const message =
         error.response?.data?.message ||
@@ -106,9 +100,7 @@ export default function SignupScreen({ navigation }) {
 
         <Text style={styles.title}>Create Account</Text>
 
-        <Text style={styles.subtitle}>
-          Join SHOPLY and start shopping
-        </Text>
+        <Text style={styles.subtitle}>Join SHOPLY and start shopping</Text>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Full Name</Text>
@@ -170,20 +162,14 @@ export default function SignupScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.signupButtonText}>
-              CREATE ACCOUNT →
-            </Text>
+            <Text style={styles.signupButtonText}>CREATE ACCOUNT →</Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>
-            Already have an account?
-          </Text>
+          <Text style={styles.loginText}>Already have an account?</Text>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Login")}
-          >
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
             <Text style={styles.loginLink}> Login</Text>
           </TouchableOpacity>
         </View>
